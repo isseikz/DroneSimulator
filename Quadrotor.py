@@ -30,7 +30,8 @@ class Quadrotor(object):
         self.M      = np.zeros(3)            # Moments [Nm]
         self.F      = np.zeros(3)            # TODO Force [N]
         self.PQRProp  = np.zeros((3,4))      # TODO Rotation of Propellers, in body frame
-        self.CTRL   = PD.Controller(omega=10, zeta=0.5) # Controller
+        self.CTRL   = PD.Controller(omega=5, zeta=0.5) # Controller
+        self.POSCTRL = PD.Controller(omega=1.0, zeta = 0.7) # Position Controller
         # self.ALLC   =                      # TODO Allocator
         self.kt     = 1.69e-2                # coefficient from the thrust to the reaction torque
         self.arm    = 0.17                   # Moment arms between GoM and each propellers
@@ -45,8 +46,9 @@ class Quadrotor(object):
         Iwb = np.dot(self.IBody,self.PQR)
         Iwp = np.dot(self.IProp,(4 * self.PQR + np.sum(self.PQRProp[2,:])))
         gyro = np.cross(self.PQR,Iwb+Iwp)
+        drag = np.array([0,0,-self.gamma]) * self.PQR
 
-        PQRDot = np.dot(self.IBodyT, moment - Iwpdot + gyro + self.dragRotation())
+        PQRDot = np.dot(self.IBodyT, moment - Iwpdot + gyro + drag)
         return PQRDot
 
     def calcEulerDot(self, PQR, YPR):
@@ -106,26 +108,43 @@ class Quadrotor(object):
 
         return FM[0], FM[1:4]
 
-    def responseConsidered(self, input):
+    def calcReducedInputFrom(self, moment, totalForce):
+        d = self.arm
+
+        FM = np.hstack((totalForce,moment[0:2]))
+
+        input = np.dot(np.array([
+        [-d,-1, 1],
+        [ 0, 2, 0],
+        [-d,-1,-1]
+        ]), FM) / 2/ d
+
+        input = np.hstack((input,0))
+
+        return input
+
+    def responseConsidered(self, input, display=False):
         output = input * self.normality
+        if display:
+            print(f"Input: {output}")
         return output
 
-    def dragRotation(self, display=False):
-        if display:
-            print(- np.array([0,0,self.gamma]) * self.PQR)
-
-        return - np.array([0,0,self.gamma]) * self.PQR
+    def preprocess(self, x, t):
+        self.YPR = x[0:3]
+        self.PQR = x[3:6]
 
     def fEuler(self, x, t):
+        self.preprocess(x,t)
+
         YPR = x[0:3]
         PQR = x[3:6]
-        self.YPR = YPR
-        self.PQR = PQR
 
         moment = x[6:9] + np.dot(npl.inv(self.IBody),self.CTRL.getMReq(YPR, PQR))
         force = 0.5 * 9.81
-        input = self.calcInputFrom(moment, force)
-        f, moment = self.calcFMFrom( self.responseConsidered( input))
+        # input = self.calcInputFrom(moment, force)
+        input = self.calcReducedInputFrom(moment, force)
+        f, moment = self.calcFMFrom( self.responseConsidered( input, display=False))
+        # print(f'F: {f}, M: {moment}')
 
         return np.hstack((self.calcEulerDot(PQR, YPR), self.calcPQRDot(moment), np.zeros(3)))
 
@@ -134,20 +153,22 @@ if __name__ == '__main__':
     uav.normality = np.array([1,1,1,0])
 
     x0 = np.zeros(9)
-    # x0[0] = pi / 6
+    x0[0] = pi / 6
     x0[1] = -pi / 6
     # x0[2] = pi/12
-    t = np.arange(0,10.0,0.001)
+    t = np.arange(0,30.0,0.001)
     x = odeint(uav.fEuler, x0, t)
 
     fig = plt.figure()
-    plt.plot(t,x[:,0])
-    plt.plot(t,x[:,1])
-    plt.plot(t,x[:,2])
+    plt.plot(t,x[:,0],label='Roll  [rad]')
+    plt.plot(t,x[:,1],label='Pitch [rad]')
+    plt.plot(t,x[:,2],label='Yaw   [rad]')
+
+    # plt.plot(t,x[:,3],label='P [rad/s]')
+    # plt.plot(t,x[:,4],label='Q [rad/s]')
+    # plt.plot(t,x[:,5],label='R [rad/s]')
+
     plt.legend()
-    # plt.plot(t,x[:,3])
-    # plt.plot(t,x[:,4])
-    # plt.plot(t,x[:,5])
     plt.grid()
     plt.show()
 

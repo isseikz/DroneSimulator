@@ -98,3 +98,150 @@ $$
 $$
 f_{real,i}=nf_{i},\\n:[0,1]
 $$
+
+## 2018/07/03 Yawing制御を放棄する分配則
+1基のプロペラが故障した状態を想定して、Yawingの制御を放棄した分配則を設計した。
+一般のクアッドロータ機では、機体は総推力（1方向の位置）、モーメント（3軸姿勢）を制御する。この時の各プロペラの出力と力・モーメントは2018/07/02に記した。プロペラが1基故障したとき、例えば本項では4番プロペラ（プロペラの番号と位置の関係は、1:前, 2:左, 3: 後, 4:右）の回転と推力が失われた場合を想定する。この時の力とモーメントの関係は$f_{4}=0$ から下式で表せる。
+
+$$
+\begin{equation}
+\left[
+\begin{array}{cc}
+-1 & -1 & -1\\
+0 & d & 0\\
+d & 0 & -d\\
+\kappa_{t} & -\kappa_{t} & \kappa_{t}
+\end{array}
+\right]
+\left(
+\begin{array}{cc}
+f_1\\
+f_2\\
+f_3\\
+\end{array}
+\right)
+=
+\left(
+  \begin{array}{cc}
+  F_{total}\\
+  M_{x}\\
+  M_{y}\\
+  M_{z}
+  \end{array}
+\right)
+\end{equation}
+$$
+
+Yawingの制御を放棄するとは、結局はこの逆行列を作るために左辺の行列の4行目を無視するということだ。つまり、
+
+$$
+\begin{eqnarray*}
+\left(
+\begin{array}{cc}
+f_1\\
+f_2\\
+f_3\\
+\end{array}
+\right)
+
+&=&
+
+\left[
+\begin{array}{cc}
+-1 & -1 & -1\\
+0 & d & 0\\
+d & 0 & -d\\
+\end{array}
+\right]^{-1}
+
+\left(
+  \begin{array}{cc}
+  F_{req, total}\\
+  M_{req, x}\\
+  M_{req, y}\\
+  \end{array}
+\right)\\
+
+&=&
+\frac{1}{2d}
+\left[
+  \begin{array}{cc}
+    -d & -1 &  1 \\
+    0  &  2 &  0 \\
+    -d & -1 & -1 \\
+  \end{array}
+\right]
+
+\left(
+  \begin{array}{cc}
+  F_{req, total}\\
+  M_{req, x}\\
+  M_{req, y}\\
+  \end{array}
+\right)
+
+\end{eqnarray*}
+$$
+
+このとき、機体に加わる力とモーメントは下式で表される。
+
+$$
+\begin{eqnarray*}
+\left(
+\begin{array}{cc}
+F    \\
+M_{y}\\
+M_{y}\\
+M_{z}\\
+\end{array}
+\right)
+
+&=&
+
+\left[
+\begin{array}{cc}
+-1 & -1 & -1 & -1 \\
+0 & d & 0 & -d\\
+d & 0 & -d & 0\\
+\kappa_{t} & -\kappa_{t} & \kappa_{t} & -\kappa_{t}
+\end{array}
+\right]
+
+\left[
+\begin{array}{cc}
+
+\frac{1}{2d}
+
+\left[
+\begin{array}{cc}
+-1 & -1 & -1\\
+0 & d & 0\\
+d & 0 & -d\\
+\end{array}
+\right]^{-1}
+
+\left(
+  \begin{array}{cc}
+  F_{req, total}\\
+  M_{req, x}\\
+  M_{req, y}\\
+  \end{array}
+\right)\\
+
+0
+\end{array}
+\right]\\
+
+&=&
+
+\left(
+  \begin{array}{cc}
+  F_{req}+M_{req,x}\\
+  M_{req, x}\\
+  M_{req, y}\\
+  -(F_{req}+2M_{req,x}/d)
+  \end{array}
+\right)
+
+\end{eqnarray*}
+$$
