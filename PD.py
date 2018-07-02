@@ -9,5 +9,5 @@ class Controller(object):
         self.gainP = omega ** 2
         self.gainD = 2 * zeta * omega
 
-    def getInput(self, x, xDot, xNom=0, xDotNom=0):
+    def getMReq(self, x, xDot, xNom=0, xDotNom=0):
         return - self.gainP * (x - xNom) - self.gainD * (xDot - xDotNom)

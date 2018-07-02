@@ -32,6 +32,8 @@ class Quadrotor(object):
         self.PQRProp  = np.zeros((3,4))      # TODO Rotation of Propellers, in body frame
         self.CTRL   = PD.Controller(omega=10, zeta=0.5) # Controller
         # self.ALLC   =                      # TODO Allocator
+        self.kt     = 1.69e-2                
+        self.arm    = 0.17
 
     def calcPQRDot(self, moment):
         M = moment
@@ -71,10 +73,45 @@ class Quadrotor(object):
         self.RDot = RDot
         return RDot
 
+    def calcInputFrom(self, moment, totalForce):
+        kt = self.kt
+        d  = self.arm
+        ktd = kt * d
+        kt2 = 2 * kt
+
+        FM = np.hstack((totalForce, moment))
+
+        input = np.dot(np.array([
+        [-ktd, 0, kt2, d],
+        [-ktd, kt2, 0, -d],
+        [-ktd, 0, -kt2, d],
+        [-ktd, -kt2, 0, -d]
+        ]), FM) / 4/ ktd
+
+        return input
+
+    def calcFMFrom(self, input):
+        kt = self.kt
+        d  = self.arm
+
+        FM = np.dot(np.array([
+        [-1,-1,-1,-1],
+        [0,d,0,-d],
+        [d,0,-d,0],
+        [kt,-kt,kt,-kt]
+        ]),input)
+
+        return FM[0], FM[1:4]
+
     def fEuler(self, x, t):
         YPR = x[0:3]
         PQR = x[3:6]
-        moment = x[6:9] + np.dot(npl.inv(self.IBody),self.CTRL.getInput(YPR, PQR))
+        moment = x[6:9] + np.dot(npl.inv(self.IBody),self.CTRL.getMReq(YPR, PQR))
+        force = 0.5 * 9.81
+        input = self.calcInputFrom(moment, force)
+        print(input)
+        f, moment = self.calcFMFrom(input)
+        print(f)
         return np.hstack((self.calcEulerDot(PQR, YPR), self.calcPQRDot(moment), np.zeros(3)))
 
 if __name__ == '__main__':
