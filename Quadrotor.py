@@ -32,8 +32,11 @@ class Quadrotor(object):
         self.PQRProp  = np.zeros((3,4))      # TODO Rotation of Propellers, in body frame
         self.CTRL   = PD.Controller(omega=10, zeta=0.5) # Controller
         # self.ALLC   =                      # TODO Allocator
-        self.kt     = 1.69e-2                
-        self.arm    = 0.17
+        self.kt     = 1.69e-2                # coefficient from the thrust to the reaction torque
+        self.arm    = 0.17                   # Moment arms between GoM and each propellers
+        self.normality  = np.ones(4)         # fault degree of the each propellers: zero -> completely fault
+
+        self.gamma  = 2.75e-3                # rotational drag
 
     def calcPQRDot(self, moment):
         M = moment
@@ -43,7 +46,7 @@ class Quadrotor(object):
         Iwp = np.dot(self.IProp,(4 * self.PQR + np.sum(self.PQRProp[2,:])))
         gyro = np.cross(self.PQR,Iwb+Iwp)
 
-        PQRDot = np.dot(self.IBodyT, moment - Iwpdot + gyro)
+        PQRDot = np.dot(self.IBodyT, moment - Iwpdot + gyro + self.dragRotation())
         return PQRDot
 
     def calcEulerDot(self, PQR, YPR):
@@ -103,31 +106,48 @@ class Quadrotor(object):
 
         return FM[0], FM[1:4]
 
+    def responseConsidered(self, input):
+        output = input * self.normality
+        return output
+
+    def dragRotation(self, display=False):
+        if display:
+            print(- np.array([0,0,self.gamma]) * self.PQR)
+
+        return - np.array([0,0,self.gamma]) * self.PQR
+
     def fEuler(self, x, t):
         YPR = x[0:3]
         PQR = x[3:6]
+        self.YPR = YPR
+        self.PQR = PQR
+
         moment = x[6:9] + np.dot(npl.inv(self.IBody),self.CTRL.getMReq(YPR, PQR))
         force = 0.5 * 9.81
         input = self.calcInputFrom(moment, force)
-        print(input)
-        f, moment = self.calcFMFrom(input)
-        print(f)
+        f, moment = self.calcFMFrom( self.responseConsidered( input))
+
         return np.hstack((self.calcEulerDot(PQR, YPR), self.calcPQRDot(moment), np.zeros(3)))
 
 if __name__ == '__main__':
     uav = Quadrotor()
+    uav.normality = np.array([1,1,1,0])
 
     x0 = np.zeros(9)
-    x0[0] = pi / 6
+    # x0[0] = pi / 6
     x0[1] = -pi / 6
-    x0[2] = pi/12
-    t = np.arange(0,2.0,0.001)
+    # x0[2] = pi/12
+    t = np.arange(0,10.0,0.001)
     x = odeint(uav.fEuler, x0, t)
 
     fig = plt.figure()
     plt.plot(t,x[:,0])
     plt.plot(t,x[:,1])
     plt.plot(t,x[:,2])
+    plt.legend()
+    # plt.plot(t,x[:,3])
+    # plt.plot(t,x[:,4])
+    # plt.plot(t,x[:,5])
     plt.grid()
     plt.show()
 
