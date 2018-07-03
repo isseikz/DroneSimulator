@@ -39,6 +39,10 @@ class Quadrotor(object):
 
         self.gamma  = 2.75e-3                # rotational drag
 
+        self.XYZ    = np.zeros(3)            # Position [m]
+        self.UVW    = np.zeros(3)            # Velocity [m/s]
+        self.UVWDot = np.zeros(3)            # Acceleration [m/s^2]
+
     def calcPQRDot(self, moment):
         M = moment
 
@@ -129,9 +133,37 @@ class Quadrotor(object):
             print(f"Input: {output}")
         return output
 
-    def preprocess(self, x, t):
-        self.YPR = x[0:3]
-        self.PQR = x[3:6]
+    def RFrom(self, EulerAngles):
+        phi = EulerAngles[0]
+        the = EulerAngles[1]
+        psi = EulerAngles[2]
+
+        RPhi = np.array([
+        [1, 0, 0],
+        [0, cos(phi), -sin(phi)],
+        [0, sin(phi),  cos(phi)]
+        ])
+
+        RTheta = np.array([
+        [cos(the), 0, sin(the)],
+        [0, 1, 0],
+        [-sin(the), 0, cos(the)]
+        ])
+
+        RPsi = np.array([
+        [cos(psi), -sin(psi), 0],
+        [sin(psi),  cos(psi), 0],
+        [0, 0, 1]
+        ])
+
+        return np.dot(RPhi, np.dot(RTheta,RPsi))
+
+    def calcUVWDot(self, force):
+        R = self.R
+        D = np.array([0,0,9.81 * self.m]) # TODO:
+        self.UVWDot = np.dot(R,np.array([0,0,force])) / self.m + D / self.m
+        # print(self.UVWDot)
+        return self.UVWDot
 
     def fEuler(self, x, t):
         self.preprocess(x,t)
@@ -148,28 +180,71 @@ class Quadrotor(object):
 
         return np.hstack((self.calcEulerDot(PQR, YPR), self.calcPQRDot(moment), np.zeros(3)))
 
+
+    def fPosition(self, x, t):
+        self.preprocess(x,t)
+
+        YPR = x[0:3]
+        PQR = x[3:6]
+        x   = x[9:12]
+        xDot = x[12:15]
+
+        moment = np.dot(npl.inv(self.IBody),self.CTRL.getMReq(YPR, PQR))
+        force = -0.5 * 9.81
+        # input = self.calcInputFrom(moment, force)
+        input = self.calcReducedInputFrom(moment, force)
+
+        # f, moment = self.calcFMFrom(input)
+        f, moment = self.calcFMFrom( self.responseConsidered( input, display=False))
+        # print(f'F: {f}, M: {moment}')
+        # print(self.calcEulerDot(PQR, YPR), self.calcPQRDot(moment), np.zeros(3),self.UVW, self.calcUVWDot(f), np.zeros(3))
+        return np.hstack((self.calcEulerDot(PQR, YPR), self.calcPQRDot(moment), np.zeros(3),self.UVW, self.calcUVWDot(f), np.zeros(3)))
+
+    def preprocess(self, x, t):
+        # print(x[9:18])
+        self.YPR = x[0:3]
+        self.PQR = x[3:6]
+        self.R   = self.RFrom(self.YPR)
+        if np.size(x) >7:
+            self.XYZ = x[9:12]
+            self.UVW = x[12:15]
+        pass
+
 if __name__ == '__main__':
     uav = Quadrotor()
     uav.normality = np.array([1,1,1,0])
 
-    x0 = np.zeros(9)
-    x0[0] = pi / 6
+    x0 = np.zeros(18)
+    # x0[0] = pi / 6
     x0[1] = -pi / 6
     # x0[2] = pi/12
     t = np.arange(0,30.0,0.001)
-    x = odeint(uav.fEuler, x0, t)
+    # x = odeint(uav.fEuler, x0, t)
+    x = odeint(uav.fPosition, x0, t)
 
     fig = plt.figure()
-    plt.plot(t,x[:,0],label='Roll  [rad]')
-    plt.plot(t,x[:,1],label='Pitch [rad]')
-    plt.plot(t,x[:,2],label='Yaw   [rad]')
+    # plt.plot(t,x[:,0],label='Roll  [rad]')
+    # plt.plot(t,x[:,1],label='Pitch [rad]')
+    # plt.plot(t,x[:,2],label='Yaw   [rad]')
 
     # plt.plot(t,x[:,3],label='P [rad/s]')
     # plt.plot(t,x[:,4],label='Q [rad/s]')
     # plt.plot(t,x[:,5],label='R [rad/s]')
 
+    # plt.plot(t,x[:, 9],label='X [m]')
+    # plt.plot(t,x[:,10],label='Y [m]')
+    # plt.plot(t,x[:,11],label='Z [m]')
+
+    plt.plot(t,x[:,12],label='U [m/s]')
+    plt.plot(t,x[:,13],label='V [m/s]')
+    plt.plot(t,x[:,14],label='W [m/s]')
+
+    # plt.plot(t,x[:,15],label='$\dot{U}[m/s^2]$ ')
+    # plt.plot(t,x[:,16],label='$\dot{V}[m/s^2]$ ')
+    # plt.plot(t,x[:,17],label='$\dot{W}[m/s^2]$ ')
+
     plt.legend()
     plt.grid()
     plt.show()
 
-    print(x)
+    print(x[:,9:12])

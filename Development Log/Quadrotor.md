@@ -245,3 +245,47 @@ d & 0 & -d\\
 
 \end{eqnarray*}
 $$
+
+## 2018/07/03 機体位置のシミュレーション
+機体位置を表すシステムの設計を行った．
+機体の重心位置の運動方程式は下式で表せる．
+$$
+\ddot{x}=\frac{1}{m}R
+\left(
+\begin{array}{cc}
+0 \\
+0 \\
+F_{total}
+\end{array}
+\right)
+-\frac{D}{m}
+$$
+
+このとき，mは機体質量，Dは外力（主に空気等による抵抗）を表す．Rは機体座標系のベクトルを慣性座標系に変換する行列で，回転行列(Rotation Matrix)である．機体の回転をEuler角（Roll  $\phi$ , Pitch $\theta$ , Yaw $\psi$ ）で表現すると，
+$$
+\begin{eqnarray}
+R(\phi,\theta,\psi)&=&R(\phi)R(\theta)R(\psi)\\
+&=&
+\left[
+\begin{array}{cc}
+1 & 0 & 0\\
+0 & cos\phi & -sin\phi\\
+0 & sin\phi & cos\phi\\
+\end{array}
+\right]
+\left[
+\begin{array}{cc}
+cos\theta & 0 & sin\theta\\
+0 & 1 & 0\\
+-sin\theta & 0 & cos\theta
+\end{array}
+\right]
+\left[
+\begin{array}{cc}
+cos\psi & -sin\psi & 0\\
+sin\psi & cos\psi  & 0\\
+0 & 0 & 1\\
+\end{array}
+\right]
+\end{eqnarray}
+$$
