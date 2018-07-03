@@ -239,9 +239,9 @@ class Quadrotor(object):
         xyz = x[9:12]
         xDot = x[12:15]
 
-        M,F = self.desiredMFFrom(self.desiredAccelerationFrom(np.array([0.6,1.0,0.0]), x[9:12], x[12:15],display=False),display=True)
+        M,F = self.desiredMFFrom(self.desiredAccelerationFrom(np.array([0.6,1.0,0.0]), x[9:12], x[12:15],display=False),display=False)
         # M,F = self.desiredMFFrom(np.array([1.0,0.0,-9.81]),display=True)
-        input = self.calcReducedInputFrom(M,F,display=True)
+        input = self.calcReducedInputFrom(M,F,display=False)
         # input = self.calcInputFrom(M,F,display=False)
 
         # f, moment = self.calcFMFrom(input)
@@ -253,7 +253,7 @@ class Quadrotor(object):
 if __name__ == '__main__':
     uav = Quadrotor()
     uav.normality = np.array([1,1,1,0])
-    tf = 40.0
+    tf = 10.0
 
     x0 = np.zeros(18)
     # x0[0] = pi / 6
@@ -267,13 +267,16 @@ if __name__ == '__main__':
     plt.plot(t,x[:,0],label='Roll  [rad]')
     plt.plot(t,x[:,1],label='Pitch [rad]')
     plt.plot(t,x[:,2],label='Yaw   [rad]')
+    plt.xlabel('time [s]',fontsize=18)
     plt.legend()
+    plt.tick_params(labelsize=18)
     plt.grid()
     plt.show()
     #
     plt.plot(t,x[:,3],label='P [rad/s]')
     plt.plot(t,x[:,4],label='Q [rad/s]')
     plt.plot(t,x[:,5],label='R [rad/s]')
+    plt.xlabel('time [s]',fontsize=18)
     plt.legend()
     plt.grid()
     plt.show()
@@ -281,6 +284,7 @@ if __name__ == '__main__':
     plt.plot(t,x[:, 9],label='X [m]')
     plt.plot(t,x[:,10],label='Y [m]')
     plt.plot(t,x[:,11],label='Z [m]')
+    plt.xlabel('time [s]',fontsize=18)
     plt.legend()
     plt.grid()
     plt.show()
@@ -288,6 +292,7 @@ if __name__ == '__main__':
     plt.plot(t,x[:,12],label='U [m/s]')
     plt.plot(t,x[:,13],label='V [m/s]')
     plt.plot(t,x[:,14],label='W [m/s]')
+    plt.xlabel('time [s]',fontsize=18)
     plt.legend()
     plt.grid()
     plt.show()
