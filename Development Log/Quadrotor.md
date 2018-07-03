@@ -289,3 +289,31 @@ sin\psi & cos\psi  & 0\\
 \right]
 \end{eqnarray}
 $$
+
+## 2018/07/03 位置制御
+機体位置の制御を，PD制御によって行う制御則を実装した．
+PD制御は，目標位置との差を $\tilde{x}=x-x_{nom}$ とすれば，以下のシステムで表現できる．
+$$
+\ddot{\tilde{x}} = -2\zeta\omega\dot{\tilde{x}}-\omega^2\tilde{x}
+$$
+とくに，目標位置を固定した場合には，目標位置の微分は零になるため，
+$$
+\ddot{x} = -2\zeta\omega\dot{x}-\omega^2\tilde{x}
+$$
+これと重力等の外乱の補償力の合計に対して，機体推力の方向を一致させれば目標位置に向かって飛行をする．上式で求めた $\ddot{x}$ から，機体が出すべき推力 $F_{req}$ とモーメント $M_{req}$ が得られる．
+$$
+\begin{eqnarray}
+F_{req} =
+\frac{m}{cos\theta cos\phi}
+\left(
+  \begin{array}{cc}
+0 & 0&1
+  \end{array}
+\right)
+(\ddot{\tilde{x}}-g)\\
+
+M_{req}=-2\zeta\omega{\dot{P}}-\omega^2{(-\frac{\tilde{x}}{|\tilde{x}|}\times{n_z})}
+\end{eqnarray}
+$$
+
+ここで，$P, n_z$ はそれぞれ角速度ベクトル，機体座標系のz方向を表す． 座標系を右手系かつ地面方向を正にとっているため，推力方向と$z$方向は真逆となる．
