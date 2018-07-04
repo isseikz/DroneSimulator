@@ -211,14 +211,13 @@ d & 0 & -d & 0\\
 \begin{array}{cc}
 
 \frac{1}{2d}
-
 \left[
-\begin{array}{cc}
--1 & -1 & -1\\
-0 & d & 0\\
-d & 0 & -d\\
-\end{array}
-\right]^{-1}
+  \begin{array}{cc}
+    -d & -1 &  1 \\
+    0  &  2 &  0 \\
+    -d & -1 & -1 \\
+  \end{array}
+\right]
 
 \left(
   \begin{array}{cc}
@@ -342,3 +341,32 @@ $$
 X=\frac{\omega_{0}}{\omega_{0}^2-\omega^2+2\zeta\omega_{0}\omega{j}}X_{ref}
 $$
 上式の意味するところは， $\omega_{0}$ が大なるときに $X=X_{ref}$ となり，$\omega$ が大なるときは $X=0$ ，すなわち不感になる，ということである．
+
+## 2018/07/04 プロペラ制約
+関連項目
++ `responseConsidered(self, input, display=False)`
++ `firstOrderDelay(self, input, past, time, dt)`
++ `thrustSaturation(self,thrusts)`
+
+プロペラには推力範囲と入力に対する遅れが存在する．一般に推力範囲は想定される推力（機体＋荷物の重量）の2倍以内にされることが多く，それ以上だとかなり余裕を持った設計となる．`firstOrderDelay`では，入力に対して1次遅れの応答を表現し，`thrustSaturation`は推力の上限・下限の制限を加える．それらを1まとめにしたのが`responseConsidered`である．
+### `firstOrderDelay`
+1次遅れ系は周波数領域において以下の式で表される．
+$$
+  X=\frac{1}{Ts+1}X_{n}
+$$
+これを時間領域に変換（逆ラプラス変換）し，n+1ステップとnステップ間での漸化式を求めると，
+$$
+\begin{eqnarray}
+(Ts+1)X&=&X_{0}\\
+TsX&=&X_{0}-X\\
+T\dot{x}&=&x_{0}-x\\
+\frac{x_{n+1}-x_{n}}{\Delta{t}}&=&\frac{x_{0}-x_{n}}{T}\\
+\therefore x_{n+1}&=&\frac{\Delta{t}}{T}x_{0}+\frac{T-\Delta{t}}{T}x_{n}
+\end{eqnarray}
+$$
+
+### `thrustSaturation(self,thrusts)`
+機体の推力制限を以下のように定めた．これは自由に設定することのできる値である．
+$$
+F_{i}=\{f\ \ \ |0.2\le{f}\le{3.8}\}
+$$
