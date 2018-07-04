@@ -1261,14 +1261,13 @@ d & 0 & -d & 0\\
 \begin{array}{cc}
 
 \frac{1}{2d}
-
 \left[
-\begin{array}{cc}
--1 & -1 & -1\\
-0 & d & 0\\
-d & 0 & -d\\
-\end{array}
-\right]^{-1}
+  \begin{array}{cc}
+    -d & -1 &  1 \\
+    0  &  2 &  0 \\
+    -d & -1 & -1 \\
+  \end{array}
+\right]
 
 \left(
   \begin{array}{cc}
@@ -1294,6 +1293,116 @@ d & 0 & -d\\
 \right)
 
 \end{eqnarray*}
+</script></span>
+<h2>2018/07/03 機体位置のシミュレーション</h2>
+<p>機体位置を表すシステムの設計を行った．
+機体の重心位置の運動方程式は下式で表せる．</p>
+<span class="math"><script type="math/tex; mode=display">\ddot{x}=\frac{1}{m}R
+\left(
+\begin{array}{cc}
+0 \\
+0 \\
+F_{total}
+\end{array}
+\right)
+-\frac{D}{m}
+</script></span>
+<p>このとき，mは機体質量，Dは外力（主に空気等による抵抗）を表す．Rは機体座標系のベクトルを慣性座標系に変換する行列で，回転行列(Rotation Matrix)である．機体の回転をEuler角（Roll  <span class="math"><script type="math/tex">\phi</script></span> , Pitch <span class="math"><script type="math/tex">\theta</script></span> , Yaw <span class="math"><script type="math/tex">\psi</script></span> ）で表現すると，</p>
+<span class="math"><script type="math/tex; mode=display">\begin{eqnarray}
+R(\phi,\theta,\psi)&=&R(\phi)R(\theta)R(\psi)\\
+&=&
+\left[
+\begin{array}{cc}
+1 & 0 & 0\\
+0 & cos\phi & -sin\phi\\
+0 & sin\phi & cos\phi\\
+\end{array}
+\right]
+\left[
+\begin{array}{cc}
+cos\theta & 0 & sin\theta\\
+0 & 1 & 0\\
+-sin\theta & 0 & cos\theta
+\end{array}
+\right]
+\left[
+\begin{array}{cc}
+cos\psi & -sin\psi & 0\\
+sin\psi & cos\psi  & 0\\
+0 & 0 & 1\\
+\end{array}
+\right]
+\end{eqnarray}
+</script></span>
+<h2>2018/07/03 位置制御</h2>
+<p>機体位置の制御を，PD制御によって行う制御則を実装した．
+PD制御は，目標位置との差を <span class="math"><script type="math/tex">\tilde{x}=x-x_{nom}</script></span> とすれば，以下のシステムで表現できる．</p>
+<span class="math"><script type="math/tex; mode=display">\ddot{\tilde{x}} = -2\zeta\omega\dot{\tilde{x}}-\omega^2\tilde{x}
+</script></span>
+<p>とくに，目標位置を固定した場合には，目標位置の微分は零になるため，</p>
+<span class="math"><script type="math/tex; mode=display">\ddot{x} = -2\zeta\omega\dot{x}-\omega^2\tilde{x}
+</script></span>
+<p>これと重力等の外乱の補償力の合計に対して，機体推力の方向を一致させれば目標位置に向かって飛行をする．上式で求めた <span class="math"><script type="math/tex">\ddot{x}</script></span> から，機体が出すべき推力 <span class="math"><script type="math/tex">F_{req}</script></span> とモーメント <span class="math"><script type="math/tex">M_{req}</script></span> が得られる．</p>
+<span class="math"><script type="math/tex; mode=display">\begin{eqnarray}
+F_{req} =
+\frac{m}{cos\theta cos\phi}
+\left(
+  \begin{array}{cc}
+0 & 0&1
+  \end{array}
+\right)
+(\ddot{\tilde{x}}-g)\\
+
+M_{req}=-2\zeta\omega{\dot{P}}-\omega^2{(-\frac{\tilde{x}}{|\tilde{x}|}\times{n_z})}
+\end{eqnarray}
+</script></span>
+<p>ここで，<span class="math"><script type="math/tex">P, n_z</script></span> はそれぞれ角速度ベクトル，機体座標系のz方向を表す． 座標系を右手系かつ地面方向を正にとっているため，推力方向と<span class="math"><script type="math/tex">z</script></span>方向は真逆となる．</p>
+<h2>2018/07/03 故障時の制御に関する注意</h2>
+<p>本項では以下の条件で耐故障制御を行った場合の注意点についてまとめた．</p>
+<ul>
+<li>位置制御：PD制御・目標点は固定</li>
+<li>姿勢制御：PD制御・P項は目標姿勢と現姿勢との外積・D項は角速度</li>
+<li>分配則：2018/07/03のもの</li>
+</ul>
+<h3>正常時と姿勢制御ゲインが全く異なる！！</h3>
+<p>姿勢制御はPD制御であり，周波数 <span class="math"><script type="math/tex">\omega</script></span> と減衰係数 <span class="math"><script type="math/tex">\zeta</script></span> を用いた系で表される．
+通常の制御においては，ゲイン決定において <span class="math"><script type="math/tex">M_{z}</script></span> の制御が制約条件となる．これは，係数 <span class="math"><script type="math/tex">\kappa_{t}</script></span> がプロペラ-重心間距離 <span class="math"><script type="math/tex">d</script></span> に比べて1桁小さいためである．Yawingの制御を放棄すると，機体角速度は <span class="math"><script type="math/tex">30[rad/s]</script></span> 程度まで増加する( <span class="math"><script type="math/tex">\because\kappa_{t}W-\gamma r=0</script></span>を解け)．したがって，機体の姿勢を制御するためには，30[rad/s]以上の周波数で制御しないと，目的の姿勢に合わせることは至難である．PD制御はハイパスフィルタだから姿勢が無視されてしまう．したがって，耐故障制御系のゲイン設定には，機体の角速度を収束式から予想される角速度以上のゲインを与えるべきである．</p>
+<h4>補足</h4>
+<span class="math"><script type="math/tex; mode=display">\begin{equation}
+  \ddot{x}=-2\zeta\omega_{0}\dot{x}-\omega^2(x-x_{ref})
+\end{equation}
+</script></span>
+<p>をラプラス変換して，変形すると，</p>
+<span class="math"><script type="math/tex; mode=display">X=\frac{\omega_{0}}{s^2+2\zeta\omega_{0}s+\omega_{0}^2}X_{ref}
+</script></span>
+<p>ここで，<span class="math"><script type="math/tex">s=j\omega</script></span> を代入して，周波数応答を調べると，</p>
+<span class="math"><script type="math/tex; mode=display">X=\frac{\omega_{0}}{\omega_{0}^2-\omega^2+2\zeta\omega_{0}\omega{j}}X_{ref}
+</script></span>
+<p>上式の意味するところは， <span class="math"><script type="math/tex">\omega_{0}</script></span> が大なるときに <span class="math"><script type="math/tex">X=X_{ref}</script></span> となり，<span class="math"><script type="math/tex">\omega</script></span> が大なるときは <span class="math"><script type="math/tex">X=0</script></span> ，すなわち不感になる，ということである．</p>
+<h2>2018/07/04 プロペラ制約</h2>
+<p>関連項目</p>
+<ul>
+<li><code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">responseConsidered(self, input, display=False)</code></li>
+<li><code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">firstOrderDelay(self, input, past, time, dt)</code></li>
+<li><code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">thrustSaturation(self,thrusts)</code></li>
+</ul>
+<p>プロペラには推力範囲と入力に対する遅れが存在する．一般に推力範囲は想定される推力（機体＋荷物の重量）の2倍以内にされることが多く，それ以上だとかなり余裕を持った設計となる．<code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">firstOrderDelay</code>では，入力に対して1次遅れの応答を表現し，<code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">thrustSaturation</code>は推力の上限・下限の制限を加える．それらを1まとめにしたのが<code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">responseConsidered</code>である．</p>
+<h3><code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">firstOrderDelay</code></h3>
+<p>1次遅れ系は周波数領域において以下の式で表される．</p>
+<span class="math"><script type="math/tex; mode=display">  X=\frac{1}{Ts+1}X_{n}
+</script></span>
+<p>これを時間領域に変換（逆ラプラス変換）し，n+1ステップとnステップ間での漸化式を求めると，</p>
+<span class="math"><script type="math/tex; mode=display">\begin{eqnarray}
+(Ts+1)X&=&X_{0}\\
+TsX&=&X_{0}-X\\
+T\dot{x}&=&x_{0}-x\\
+\frac{x_{n+1}-x_{n}}{\Delta{t}}&=&\frac{x_{0}-x_{n}}{T}\\
+\therefore x_{n+1}&=&\frac{\Delta{t}}{T}x_{0}+\frac{T-\Delta{t}}{T}x_{n}
+\end{eqnarray}
+</script></span>
+<h3><code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">thrustSaturation(self,thrusts)</code></h3>
+<p>機体の推力制限を以下のように定めた．これは自由に設定することのできる値である．</p>
+<span class="math"><script type="math/tex; mode=display">F_{i}=\{f\ \ \ |0.2\le{f}\le{3.8}\}
 </script></span>
 
   </body>
