@@ -1065,7 +1065,7 @@ pre.editor-colors .fold-marker:after {
 </style>
 
   </head>
-  <body class="markdown-preview-plus-view" data-use-github-style>
+  <body class="markdown-preview-plus-view">
     <h1>Quadrotor.pyに関して</h1>
 <h2>2018/07/02 分配則</h2>
 <p>分配則を以下の過程で設計した．
@@ -1154,7 +1154,7 @@ d & 0 & -d & 0\\
 </script></span>
 <p>ただし、<span class="math"><script type="math/tex">\kappa_{t}</script></span> が小さい（モデル機では<span class="math"><script type="math/tex">10^{-2}</script></span> 程度）ため、要求するyawing量が大きいと、プロペラに対して大きな入力を与えることになるため、注意が必要である。場合によっては、<span class="math"><script type="math/tex">M_{req, z}</script></span> のみ別のゲインで計算することが必要。</p>
 <h2>2018/07/02 プロペラの故障度</h2>
-<p>プロペラの故障度を、変数<code style="font-family: Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace;">self.normality</code>を用いて表現した。</p>
+<p>プロペラの故障度を、変数<code style="font-family: &quot;Noto Sans Mono CJK JP&quot;;">self.normality</code>を用いて表現した。</p>
 <span class="math"><script type="math/tex; mode=display">f_{real,i}=nf_{i},\\n:[0,1]
 </script></span>
 <h2>2018/07/03 Yawing制御を放棄する分配則</h2>
@@ -1379,6 +1379,7 @@ M_{req}=-2\zeta\omega{\dot{P}}-\omega^2{(-\frac{\tilde{x}}{|\tilde{x}|}\times{n_
 <span class="math"><script type="math/tex; mode=display">X=\frac{\omega_{0}}{\omega_{0}^2-\omega^2+2\zeta\omega_{0}\omega{j}}X_{ref}
 </script></span>
 <p>上式の意味するところは， <span class="math"><script type="math/tex">\omega_{0}</script></span> が大なるときに <span class="math"><script type="math/tex">X=X_{ref}</script></span> となり，<span class="math"><script type="math/tex">\omega</script></span> が大なるときは <span class="math"><script type="math/tex">X=0</script></span> ，すなわち不感になる，ということである．</p>
+<<<<<<< HEAD
 <h2>2018/07/04 プロペラ制約</h2>
 <p>関連項目</p>
 <ul>
@@ -1404,6 +1405,8 @@ T\dot{x}&=&x_{0}-x\\
 <p>機体の推力制限を以下のように定めた．これは自由に設定することのできる値である．</p>
 <span class="math"><script type="math/tex; mode=display">F_{i}=\{f\ \ \ |0.2\le{f}\le{3.8}\}
 </script></span>
+=======
+>>>>>>> d2f971693ab6feacbed146b223060704d0a24ac1
 
   </body>
 </html>
