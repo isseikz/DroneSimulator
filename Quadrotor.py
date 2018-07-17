@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 
 import PD
 
+from control.matlab import lqr
+
 
 
 class Quadrotor(object):
@@ -265,6 +267,81 @@ class Quadrotor(object):
 
         return np.hstack((self.calcEulerDot(PQR, YPR, display=False), self.calcPQRDot(moment, display=False), np.zeros(3),self.UVW, self.calcUVWDot(f), np.zeros(3)))
 
+    def fLQR(self, x, t, K):
+        self.preprocess(x,t,display=False)
+
+        YPR = x[0:3]
+        PQR = x[3:6]
+        xyz = x[9:12]
+        xDot = x[12:15]
+        R = RFrom(self, YPR)
+
+        M,F = self.desiredMFFrom(self.desiredAccelerationFrom(np.array([0.6,1.0,-0.2]), x[9:12], x[12:15],display=False),display=False)
+
+        sTilde = np.array([0,0,0,0])
+        sTilde[0] = PQR[0] - 0
+        sTilde[1] = PQR[1] - 5.69
+        sTilde[2] = R[0,2] - 0
+        sTilde[3] = R[1,2] - 0.289
+
+        uTilde = np.dot(K,sTilde)
+
+        input = np.array([0,0,0,0])
+        input[0] = (5.07 - uTilde[1])/2  + 2.05
+        input[1] = uTilde[1] + 1.02
+        input[2] = -(5.07 - uTilde[1])/2 + 2.05
+        input[3] = 0.0
+
+        f, moment = self.calcFMFrom( self.responseConsidered( input, display=False), display=False)
+
+        return np.hstack((self.calcEulerDot(PQR, YPR, display=False), self.calcPQRDot(moment, display=False), np.zeros(3),self.UVW, self.calcUVWDot(f), np.zeros(3)))
+
+    def simLQR(self):
+        tf = 20.0
+        stepSize = 0.001
+        uav = Quadrotor(logSize=tf//stepSize)
+        uav.normality = np.array([1,1,1,0])
+
+        It = self.ITotal
+        Ib = self.IBody
+        Ip = self.IProp
+
+        l = self.arm
+        r = 18.89
+
+        A = (It[0,0]-It[2,2])/Ib[0,0] * r
+        B = np.array([
+        [0, l/Ib[0,0]],
+        [l/Ib[0,0], 0],
+        [0,0],
+        [0,0]
+        ])
+        Q = np.array([
+        [1,0,0,0],
+        [0,1,0,0],
+        [0,0,20,0],
+        [0,0,0,20]
+        ])
+        R = np.array([
+        [1,0],
+        [0,1]
+        ])
+
+        K, P, e = lqr(A, B, Q, R)
+
+        x0 = np.zeros(18)
+        # x0[0] = pi / 6
+        # x0[1] = -pi / 6
+        # x0[2] = pi/12
+        t = np.arange(0,tf,stepSize)
+        x = odeint(uav.fLQR, x0, t, K)
+
+        return x, t
+
+
+
+
+
 
 if __name__ == '__main__':
     tf = 20.0
@@ -276,9 +353,11 @@ if __name__ == '__main__':
     # x0[0] = pi / 6
     # x0[1] = -pi / 6
     # x0[2] = pi/12
-    t = np.arange(0,tf,stepSize)
-    # x = odeint(uav.fEuler, x0, t)
-    x = odeint(uav.fPosition, x0, t)
+    # t = np.arange(0,tf,stepSize)
+    # # x = odeint(uav.fEuler, x0, t)
+    # x = odeint(uav.fPosition, x0, t)
+
+    x, t = uav.simLQR()
 
     fig = plt.figure(figsize=(8, 5))
     plt.plot(t,x[:,0],label='Roll  [rad]')
