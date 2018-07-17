@@ -49,7 +49,7 @@ class Quadrotor(object):
         self.UVWDot = np.zeros(3)            # Acceleration [m/s^2]
 
         self.log    = np.zeros((1, 23))
-        self.gain = np.zeros((2,4))
+        self.K = np.zeros((2,4))
 
 
     def calcPQRDot(self, moment, display=False):
@@ -59,7 +59,8 @@ class Quadrotor(object):
         Iwb = np.dot(self.IBody,self.PQR)
         Iwp = np.dot(self.IProp,(4 * self.PQR + np.sum(self.PQRProp[2,:])))
         gyro = np.cross(self.PQR,Iwb+Iwp)
-        drag = np.array([0,0,-self.gamma]) * self.PQR
+        drag = np.array([0.0,0.0,-self.gamma]) * self.PQR
+        print(self.PQR)
 
         PQRDot = np.dot(self.IBodyI, moment - Iwpdot + gyro  + drag)
         self.PQRDot = PQRDot
@@ -155,7 +156,7 @@ class Quadrotor(object):
         # output =self.thrustSaturation(input) * self.normality
         output = input * self.normality
         # self.FProp = self.firstOrderDelay(output, self.FProp, 0.015, 0.001)
-        self.FProp = output
+        self.FProp = output0,0
         if display:
             print(f"responseConsidered: Input={self.FProp}")
         return self.FProp
@@ -255,8 +256,8 @@ class Quadrotor(object):
         return np.hstack((self.calcEulerDot(PQR, YPR, display=False), self.calcPQRDot(moment, display=False), np.zeros(3),self.UVW, self.calcUVWDot(f), np.zeros(3)))
 
     def preprocess(self, x, t, display=False):
-        # self.log = np.vstack((self.log, np.hstack((t,x,self.FProp))))
-
+        self.log = np.vstack((self.log, np.hstack((t,x,self.FProp))))
+        print(x)
         # print(x[9:18])
         self.YPR = x[0:3]
         self.PQR = x[3:6]
@@ -311,7 +312,7 @@ class Quadrotor(object):
 
     def simLQR(self):
         tf = 20.0
-        stepSize = 0.001
+        stepSize = 0.01
         uav = Quadrotor(logSize=tf//stepSize)
         uav.normality = np.array([1,1,1,0])
 
@@ -349,7 +350,7 @@ class Quadrotor(object):
         ])
 
         K, P, e = lqr(A, B, Q, R)
-        uav.gain = K
+        uav.K = K
         print(f'K: {K}')
 
         x0 = np.zeros(18)
@@ -361,7 +362,7 @@ class Quadrotor(object):
         t = np.arange(0,tf,stepSize)
 
         # ODEの設定
-        solver = ode(uav.fLQR2).set_integrator('dopri5',nsteps=50000)
+        solver = ode(uav.fLQR2).set_integrator('vode', method='bdf')
         solver.set_initial_value(x0, 0.0)
         dt = stepSize
 
@@ -382,34 +383,36 @@ class Quadrotor(object):
             xyz = x[9:12]
             xDot = x[12:15]
             R = self.RFrom(YPR)
-            K = self.gain
+            # K = self.K
 
             M,F = self.desiredMFFrom(self.desiredAccelerationFrom(np.array([0.0,0.0,0.0]), x[9:12], x[12:15],display=False),display=False)
             Fnorm = 5.05 #npl.norm(F) #
             # print(Fnorm)
 
-            sTilde = np.array([0,0,0,0])
-            sTilde[0] = PQR[0] - 0
+            sTilde = np.array([0.0,0.0,0.0,0.0])
+            sTilde[0] = PQR[0] - 0.0
             sTilde[1] = PQR[1] - 5.69
-            sTilde[2] = R[0,2] - 0
+            sTilde[2] = R[0,2] - 0.0
             sTilde[3] = R[1,2] - 0.289
             # print(f'sTilde: {sTilde}')
 
+            # print(K)
             uTilde = -np.dot(K,sTilde)
-            # print(f'uTilde: {uTilde}')
+            print(f'uTilde: {uTilde}')
 
-            input = np.array([0,0,0,0])
-            input[1] = uTilde[1] + Fnorm/5
-            input[0] = (Fnorm - uTilde[0]-input[1])/2
-            input[2] = (Fnorm - uTilde[0]+input[1])/2
+            input = np.array([0.0,0.0,0.0,0.0])
+            input[1] = uTilde[1] + Fnorm/5.0
+            input[0] = (Fnorm - uTilde[0]-input[1])/2.0
+            input[2] = (Fnorm - uTilde[0]+input[1])/2.0
             input[3] = 0.0
-            # print(f'input: {input}')
+            print(f'input: {input}')
 
             f, moment = self.calcFMFrom( input, display=False)
+            print(f'f: {f}, m: {moment}')
 
             solver.set_f_params(f,moment, PQR, YPR)
             solver.integrate(solver.t+dt)
-            print(f't: {solver.t}, pqr: {solver.y[3:5]}')
+            print(f't: {solver.t}, pqr: {PQR}')
             tlog[index] = solver.t
             xlog[index] = solver.y
             index = index +1
@@ -531,6 +534,8 @@ class Quadrotor(object):
 
 
 
+
+
 if __name__ == '__main__':
     tf = 2.0
     stepSize = 0.001
@@ -590,17 +595,17 @@ if __name__ == '__main__':
     plt.grid()
     plt.show()
 
-    # fig = plt.figure(figsize=(8, 4))
-    # plt.plot(uav.log[:,0],uav.log[:,19],label='F1 [N]')
-    # plt.plot(uav.log[:,0],uav.log[:,20],label='F2 [N]')
-    # plt.plot(uav.log[:,0],uav.log[:,21],label='F3 [N]')
-    # plt.plot(uav.log[:,0],uav.log[:,22],label='F4 [N]')
-    # plt.xlabel('time [s]',fontsize=18)
-    # plt.rcParams["font.size"] = 18
-    # plt.tight_layout()
-    # plt.legend()
-    # plt.grid()
-    # plt.show()
+    fig = plt.figure(figsize=(8, 4))
+    plt.plot(uav.log[:,0],uav.log[:,19],label='F1 [N]')
+    plt.plot(uav.log[:,0],uav.log[:,20],label='F2 [N]')
+    plt.plot(uav.log[:,0],uav.log[:,21],label='F3 [N]')
+    plt.plot(uav.log[:,0],uav.log[:,22],label='F4 [N]')
+    plt.xlabel('time [s]',fontsize=18)
+    plt.rcParams["font.size"] = 18
+    plt.tight_layout()
+    plt.legend()
+    plt.grid()
+    plt.show()
     #
     # plt.plot(t,x[:,15],label='$\dot{U}[m/s^2]$ ')
     # plt.plot(t,x[:,16],label='$\dot{V}[m/s^2]$ ')
